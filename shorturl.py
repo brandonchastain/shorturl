@@ -72,12 +72,14 @@ def delete(name):
     with sqlite3.connect(dbname) as db:
         db.execute("DELETE FROM urls WHERE shorturl = ?", [name])
 
+# Access db data
 def getFromDb(shorturl):
     with sqlite3.connect(dbname) as db:
         res = db.execute("SELECT longurl from urls WHERE shorturl = ?", [shorturl])
         longurl = res.fetchone()
         return longurl[0] if longurl != None else None
 
+# Add to data in db
 def addToDb(shorturl, longurl):
     with sqlite3.connect(dbname) as db:
         db.execute("INSERT INTO urls (shorturl, longurl) VALUES (?,?)", [shorturl, longurl])
