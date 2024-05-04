@@ -1,9 +1,19 @@
 from bottle import route, run, request, response, redirect
 import base64
+import configparser
+import sqlite3
 
 # Map of shorturls to their associated long urls
 # (ideally should be a database or KV store)
 urlMap = dict()
+
+# site name displayed in short links returned to users
+siteurl = ""
+
+# database object (sqlite3)
+db = None
+
+dbname = "shorturls.db"
 
 @route('/', method="get")
 def index():
@@ -18,35 +28,73 @@ def index():
 # Creates a new url with provided name and long url.
 @route('/', method="post")
 def post():
+    # TODO: implement a lock or tx for get -> add flow to avoid race conditions
     name = request.params['name']
     longurl = request.params['longurl']
+
+    if not (longurl.startswith("http://") or longurl.startswith("https://")):
+        longurl = "https://" + longurl
+
+    existingRec = getFromDb(name)
+    if existingRec != None:
+        response.status = 409
+        return "A shortlink with name %s already exists" % (name)
 
     if name == None or len(name) == 0:
         # use a base64-encoded hash of the long url to generate a short url
         h = hash(longurl)
         encoded = base64.b64encode(str(h).encode()).decode()
         name = encoded.lower().strip('=')
-    elif name in urlMap and urlMap[name] != None:
-        response.status = 409
-        return "A shortlink with name %s already exists" % (name)
     
-    urlMap[name] = longurl
-    return '<b>Short URL:</b> <a href="http://localhost:8080/%s">http://localhost:8080/%s' % (name, name)
+    addToDb(name, longurl)
+
+    return '<b>Short URL:</b> <a href="/%s">%s/%s' % (name, siteurl, name)
 
 # Redirects the user to the longurl referred to by the provided shorturl.
 @route('/<name>', method="get")
 def get(name):
-    if not name in urlMap or urlMap[name] == None:
+    existingRec = getFromDb(name)
+
+    if existingRec == None:
         response.status = 404
-        return
-    redirect(urlMap[name])
+        return "404 Not Found"
+    
+    redirect(existingRec)
 
 # Deletes a shorturl.
 @route('/<name>', method="delete")
 def delete(name):
-    if not name in urlMap or urlMap[name] == None:
-        response.status = 404
-        return
-    urlMap[name] = None
+    # TODO: implement a lock or tx for get -> delete flow to avoid race conditions
+    existingRec = getFromDb(name)
 
-run(host='localhost', port=8080)
+    if existingRec == None:
+        response.status = 404
+        return "404 Not Found"
+    
+    with sqlite3.connect(dbname) as db:
+        db.execute("DELETE FROM urls WHERE shorturl = ?", [name])
+
+def getFromDb(shorturl):
+    with sqlite3.connect(dbname) as db:
+        res = db.execute("SELECT longurl from urls WHERE shorturl = ?", [shorturl])
+        longurl = res.fetchone()
+        return longurl[0] if longurl != None else None
+
+def addToDb(shorturl, longurl):
+    with sqlite3.connect(dbname) as db:
+        db.execute("INSERT INTO urls (shorturl, longurl) VALUES (?,?)", [shorturl, longurl])
+
+def main():
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    global siteurl
+    siteurl = config['shorturl']['siteurl']
+    port = config['shorturl']['port']
+
+    with sqlite3.connect(dbname) as db:
+        db.execute("CREATE TABLE IF NOT EXISTS urls(shorturl, longurl)")
+    
+    run(host='localhost', port=port)
+
+if __name__ == "__main__":
+    main()
