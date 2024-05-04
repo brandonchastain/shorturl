@@ -10,9 +10,7 @@ urlMap = dict()
 # site name displayed in short links returned to users
 siteurl = ""
 
-# database object (sqlite3)
-db = None
-
+# sqllite file name
 dbname = "shorturls.db"
 
 @route('/', method="get")
