@@ -3,10 +3,6 @@ import base64
 import configparser
 import sqlite3
 
-# Map of shorturls to their associated long urls
-# (ideally should be a database or KV store)
-urlMap = dict()
-
 # site name displayed in short links returned to users
 siteurl = ""
 
