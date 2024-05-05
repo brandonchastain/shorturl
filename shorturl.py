@@ -90,7 +90,7 @@ def main():
     with sqlite3.connect(dbname) as db:
         db.execute("CREATE TABLE IF NOT EXISTS urls(shorturl, longurl)")
     
-    run(host='localhost', port=port, server="gunicorn")
+    run(host='0.0.0.0', port=port, server="gunicorn")
 
 if __name__ == "__main__":
     main()
