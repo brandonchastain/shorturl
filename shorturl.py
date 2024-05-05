@@ -12,6 +12,7 @@ dbname = "shorturls.db"
 @route('/', method="get")
 def index():
     return '''
+        <h1>ShortUrl</h1>
         <form action="/" method="post">
             Long URL: <input name="longurl" type="text" /> <br/>
             Short name (optional): <input name="name" type="text" />
@@ -42,7 +43,11 @@ def post():
     
     addToDb(name, longurl)
 
-    return '<b>Short URL:</b> <a href="/%s">%s/%s' % (name, siteurl, name)
+    return '''
+        <b>Short URL:</b>
+        <a href="/%s">%s/%s</a>
+        <button onclick="history.back()">Go Back</button>
+        ''' % (name, siteurl, name)
 
 # Redirects the user to the longurl referred to by the provided shorturl.
 @route('/<name>', method="get")
