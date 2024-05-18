@@ -1,3 +1,5 @@
 cspell.json
-*.db
-venv
+*.db*
+.venv
+.DS_Store
+.env
